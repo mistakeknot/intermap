@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -95,12 +96,12 @@ func (c *Client) ListReservations(ctx context.Context, project string) ([]Reserv
 		return nil, nil
 	}
 
-	url := c.baseURL + "/api/reservations"
+	reqURL := c.baseURL + "/api/reservations"
 	if project != "" {
-		url += "?project=" + project
+		reqURL += "?project=" + url.QueryEscape(project)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
