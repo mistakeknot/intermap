@@ -1,6 +1,6 @@
 # Compiled binary
 bin/intermap-mcp
-intermap-mcp
+/intermap-mcp
 
 # Python
 __pycache__/
