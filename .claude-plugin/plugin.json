@@ -1,0 +1,22 @@
+{
+  "name": "intermap",
+  "version": "0.1.0",
+  "description": "Project-level code mapping: project registry, call graphs, architecture analysis, agent overlay. MCP server with 6 tools.",
+  "author": {
+    "name": "mistakeknot"
+  },
+  "license": "MIT",
+  "hooks": "./hooks/hooks.json",
+  "skills": ["./skills/SKILL.md"],
+  "mcpServers": {
+    "intermap": {
+      "type": "stdio",
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/launch-mcp.sh",
+      "args": [],
+      "env": {
+        "INTERMUTE_URL": "http://127.0.0.1:7338",
+        "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}/python"
+      }
+    }
+  }
+}
