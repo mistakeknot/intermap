@@ -7,7 +7,7 @@
   },
   "license": "MIT",
   "skills": [
-    "./skills/SKILL.md"
+    "./skills"
   ],
   "mcpServers": {
     "intermap": {
