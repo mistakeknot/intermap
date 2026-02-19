@@ -1,12 +1,11 @@
 {
   "name": "intermap",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Project-level code mapping: project registry, call graphs, architecture analysis, agent overlay. MCP server with 6 tools.",
   "author": {
     "name": "mistakeknot"
   },
   "license": "MIT",
-  "hooks": "./hooks/hooks.json",
   "skills": [
     "./skills/SKILL.md"
   ],
