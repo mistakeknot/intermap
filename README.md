@@ -10,6 +10,14 @@ The server is Go with a Python analysis bridge. Go handles the MCP transport and
 
 ## Installation
 
+First, add the [interagency marketplace](https://github.com/mistakeknot/interagency-marketplace) (one-time setup):
+
+```bash
+/plugin marketplace add mistakeknot/interagency-marketplace
+```
+
+Then install the plugin:
+
 ```bash
 /plugin install intermap
 ```
