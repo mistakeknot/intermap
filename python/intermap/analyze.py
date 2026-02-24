@@ -56,7 +56,6 @@ def dispatch(command: str, project: str, args: dict) -> dict:
         return analyze_change_impact(
             project,
             files=args.get("files"),
-            use_session=args.get("use_session", False),
             use_git=args.get("use_git", False),
             git_base=args.get("git_base", "HEAD~1"),
             language=args.get("language", "python"),

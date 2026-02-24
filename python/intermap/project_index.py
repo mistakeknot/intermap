@@ -17,7 +17,7 @@ from .file_cache import FileCache
 from .protocols import FunctionInfo
 from .cross_file_calls import build_project_call_graph
 from .extractors import DefaultExtractor
-from .vendor.workspace import iter_workspace_files
+from .workspace import iter_workspace_files
 
 
 _EXT_MAP = {

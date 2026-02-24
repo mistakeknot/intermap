@@ -7,7 +7,7 @@ without pulling in the full API facade from tldr-swinton.
 from pathlib import Path
 
 from .extractors import DefaultExtractor
-from .vendor.workspace import iter_workspace_files
+from .workspace import iter_workspace_files
 
 
 # Extension map for language detection

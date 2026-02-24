@@ -1,8 +1,8 @@
 """
-Change Impact Analysis for TLDR.
+Change Impact Analysis.
 
 Determines which tests to run based on changed files.
-Uses session-based tracking (dirty_flag) or explicit file list.
+Uses explicit file list or git diff.
 """
 
 import logging
@@ -12,8 +12,7 @@ from pathlib import Path
 
 from .analysis import analyze_impact
 from .extractors import DefaultExtractor
-from .vendor.dirty_flag import get_dirty_files
-from .vendor.workspace import iter_workspace_files
+from .workspace import iter_workspace_files
 
 logger = logging.getLogger(__name__)
 
@@ -318,11 +317,11 @@ def get_git_changed_files(project_path: str, base: str = "HEAD~1") -> list[str]:
 def analyze_change_impact(
     project_path: str,
     files: list[str] | None = None,
-    use_session: bool = False,
     use_git: bool = False,
     git_base: str = "HEAD~1",
     language: str = "python",
     max_depth: int = 5,
+    **_kwargs,
 ) -> dict:
     """
     Main entry point for change impact analysis.
@@ -330,7 +329,6 @@ def analyze_change_impact(
     Args:
         project_path: Root directory of the project
         files: Explicit list of changed files (optional)
-        use_session: Use dirty_flag to get session-modified files
         use_git: Use git diff to get changed files
         git_base: Git ref to diff against (default: HEAD~1)
         language: Programming language
@@ -348,20 +346,13 @@ def analyze_change_impact(
     if files:
         changed_files = files
         source = "explicit"
-    elif use_session:
-        changed_files = get_dirty_files(project)
-        source = "session"
     elif use_git:
         changed_files = get_git_changed_files(str(project), git_base)
         source = f"git:{git_base}"
     else:
-        # Default: try session first, then git
-        changed_files = get_dirty_files(project)
-        if changed_files:
-            source = "session"
-        else:
-            changed_files = get_git_changed_files(str(project))
-            source = "git:HEAD~1" if changed_files else "none"
+        # Default: try git
+        changed_files = get_git_changed_files(str(project))
+        source = "git:HEAD~1" if changed_files else "none"
 
     if not changed_files:
         return {

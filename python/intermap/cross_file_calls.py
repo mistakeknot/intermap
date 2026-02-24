@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, Optional
 
-from .vendor.workspace import WorkspaceConfig, load_workspace_config
+from .workspace import WorkspaceConfig, load_workspace_config
 
 # Tree-sitter support for TypeScript
 try:
@@ -309,7 +309,7 @@ def scan_project(
     Returns:
         List of absolute paths to source files
     """
-    from .vendor.workspace import iter_workspace_files
+    from .workspace import iter_workspace_files
 
     root = Path(root).resolve()
 
