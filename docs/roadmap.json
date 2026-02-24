@@ -1,0 +1,17 @@
+{
+  "module_summary": "Project-level code mapping via MCP tools: registry, call graphs, impact analysis, architecture detection, and agent overlay.",
+  "roadmap": {
+    "now": [
+      {"id": "IMAP-N1", "title": "Complete tldr-swinton extraction and fix test paths.", "priority": "P1"},
+      {"id": "IMAP-N2", "title": "Audit all 6 tools for accuracy, performance, and integration gaps.", "priority": "P1"}
+    ],
+    "next": [
+      {"id": "IMAP-N3", "title": "Cross-project dependency graph MCP tool.", "priority": "P2"},
+      {"id": "IMAP-N4", "title": "Architecture pattern detection MCP tool.", "priority": "P2"}
+    ],
+    "later": [
+      {"id": "IMAP-L1", "title": "Live change awareness via git-diff with structural annotation.", "priority": "P2"},
+      {"id": "IMAP-L2", "title": "Deeper intermute integration (agent activity heatmaps).", "priority": "P3"}
+    ]
+  }
+}
