@@ -337,6 +337,9 @@ def analyze_change_impact(
     Returns:
         Dict with affected tests and metadata
     """
+    if _kwargs:
+        logger.debug("analyze_change_impact: ignoring unknown kwargs: %s", list(_kwargs))
+
     project = Path(project_path).resolve()
 
     # Determine changed files

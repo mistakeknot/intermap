@@ -3,7 +3,6 @@
 import os
 import re
 import json
-from pathlib import Path
 
 
 def scan_cross_project_deps(root: str) -> dict:
@@ -94,11 +93,15 @@ def _scan_go_deps(project_path: str, project_lookup: dict) -> list[dict]:
     if not os.path.isfile(gomod):
         return []
     deps = []
-    with open(gomod) as f:
+    with open(gomod, encoding="utf-8", errors="replace") as f:
         content = f.read()
+    # Strip comment lines to avoid false edges from commented-out directives
+    non_comment = "\n".join(
+        l for l in content.splitlines() if not l.lstrip().startswith("//")
+    )
     # Match replace directives — handles both single-line and block form
     # (amendment #3: don't anchor on 'replace' keyword, handle block form)
-    for match in re.finditer(r'\S+\s+=>\s+(\.\./\S+)', content):
+    for match in re.finditer(r'\S+\s+=>\s+(\.\./\S+)', non_comment):
         rel = match.group(1)
         abs_path = os.path.normpath(os.path.join(project_path, rel))
         target_name = os.path.basename(abs_path)
@@ -113,7 +116,7 @@ def _scan_python_deps(project_path: str, project_lookup: dict) -> list[dict]:
     if not os.path.isfile(pyproject):
         return []
     deps = []
-    with open(pyproject) as f:
+    with open(pyproject, encoding="utf-8", errors="replace") as f:
         content = f.read()
     # Match path dependencies: name = {path = "../sibling"}
     # (amendment #11: use [\w-]+ for hyphenated package names)
@@ -140,7 +143,7 @@ def _scan_plugin_deps(project_path: str, project_lookup: dict) -> list[dict]:
     ]:
         if not os.path.isfile(pjson_path):
             continue
-        with open(pjson_path) as f:
+        with open(pjson_path, encoding="utf-8", errors="replace") as f:
             try:
                 manifest = json.load(f)
             except json.JSONDecodeError:

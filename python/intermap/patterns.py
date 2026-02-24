@@ -130,7 +130,7 @@ def _detect_python_patterns(project_path: str) -> list[dict]:
     patterns = []
     for root, dirs, files in os.walk(project_path):
         dirs[:] = [d for d in dirs if d not in {
-            ".git", "__pycache__", "venv", ".venv", "node_modules",
+            ".git", "__pycache__", "venv", ".venv", "node_modules", "vendor",
         }]
         for fname in files:
             if not fname.endswith(".py"):

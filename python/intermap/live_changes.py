@@ -1,10 +1,13 @@
 """Live change awareness — git-diff based change detection with structural annotation."""
 
+import logging
 import os
 import re
 import subprocess
 
 from .extractors import DefaultExtractor
+
+logger = logging.getLogger(__name__)
 
 
 def get_live_changes(
@@ -65,8 +68,8 @@ def get_live_changes(
                                 "type": "method",
                                 "line": method.line_number,
                             })
-            except Exception:
-                pass  # Extraction failure is non-fatal
+            except Exception as e:
+                logger.debug("extraction failed for %s: %s", fpath, e)
 
         change["symbols_affected"] = symbols
         total_symbols += len(symbols)
@@ -122,13 +125,13 @@ def _get_git_diff(project_path: str, baseline: str) -> list[dict]:
                 new_match = re.search(r'\+(\d+)(?:,(\d+))?', line)
                 if new_match:
                     new_start = int(new_match.group(1))
-                    new_count = int(new_match.group(2) or 1)
+                    raw_count = new_match.group(2)
+                    new_count = int(raw_count) if raw_count is not None else 1
                     old_start = int(old_match.group(1)) if old_match else new_start
-                    # count=0 means pure deletion/insertion at that point
                     files[current_file]["hunks"].append({
                         "old_start": old_start,
                         "new_start": new_start,
-                        "new_count": max(new_count, 1),
+                        "new_count": new_count,
                     })
 
         return list(files.values())
