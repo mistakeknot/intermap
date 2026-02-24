@@ -1,18 +1,9 @@
-# Intermap Roadmap
+# intermap Roadmap
 
-## Now (in progress)
+> Auto-generated from beads on 2026-02-23. Strategic context: [Demarch Roadmap](../../../docs/demarch-roadmap.md)
 
-- Complete tldr-swinton extraction — vendor modules promoted to first-class intermap code
-- Fix test paths for monorepo structure
-- Audit all 6 existing tools for accuracy and integration gaps
+## Open Items
 
-## Next
+- ○ iv-3kz0v [● P2] [task] - F5: Write real Intermap vision and roadmap docs
+- ○ iv-dl72x [● P2] [task] - F1: Audit existing Intermap MCP tools (accuracy, performance, integration)
 
-- **Cross-project dependency graph** — parse go.mod, pyproject.toml, plugin manifests to build dependency edges between monorepo projects
-- **Architecture pattern detection** — extend existing `analyze_architecture` to detect MVC, event-driven, plugin system, and API patterns
-
-## Later
-
-- **Live change awareness** — git diff with structural annotation showing which functions/classes changed
-- **Deeper intermute integration** — agent activity heatmaps overlaid on project structure
-- **Multi-language expansion** — improve TypeScript, Go, and Rust analysis parity with Python
