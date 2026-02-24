@@ -1,12 +1,18 @@
 """Tests for intermap analyze dispatcher."""
 
+import os
+
 from intermap.analyze import dispatch
+
+# Resolve intermap root relative to this test file
+_TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+INTERMAP_ROOT = os.path.normpath(os.path.join(_TESTS_DIR, "../.."))
 
 
 def test_dispatch_structure():
     result = dispatch(
         "structure",
-        "/root/projects/Interverse/plugins/intermap",
+        INTERMAP_ROOT,
         {"language": "python", "max_results": 3},
     )
     assert "files" in result
@@ -16,10 +22,11 @@ def test_dispatch_structure():
 
 
 def test_dispatch_extract():
+    protocols_path = os.path.join(INTERMAP_ROOT, "python/intermap/protocols.py")
     result = dispatch(
         "extract",
         ".",
-        {"file": "/root/projects/Interverse/plugins/intermap/python/intermap/protocols.py"},
+        {"file": protocols_path},
     )
     assert "functions" in result
     assert "classes" in result
@@ -37,7 +44,7 @@ def test_dispatch_unknown_command():
 def test_dispatch_call_graph():
     result = dispatch(
         "call_graph",
-        "/root/projects/Interverse/plugins/intermap",
+        INTERMAP_ROOT,
         {"language": "python"},
     )
     assert "edges" in result

@@ -8,7 +8,7 @@ import (
 
 func TestScan_Interverse(t *testing.T) {
 	// Test against actual Interverse structure
-	root := findInterverseRoot(t)
+	root := findDemarchRoot(t)
 	projects, err := Scan(root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
@@ -38,7 +38,7 @@ func TestScan_Interverse(t *testing.T) {
 }
 
 func TestScan_LanguageDetection(t *testing.T) {
-	root := findInterverseRoot(t)
+	root := findDemarchRoot(t)
 	projects, err := Scan(root)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
@@ -59,8 +59,8 @@ func TestScan_LanguageDetection(t *testing.T) {
 }
 
 func TestResolve(t *testing.T) {
-	root := findInterverseRoot(t)
-	interlockPath := filepath.Join(root, "plugins", "interlock")
+	root := findDemarchRoot(t)
+	interlockPath := filepath.Join(root, "interverse", "interlock")
 	if _, err := os.Stat(interlockPath); err != nil {
 		t.Skip("interlock directory not found")
 	}
@@ -85,8 +85,8 @@ func TestResolve_NotInProject(t *testing.T) {
 }
 
 func TestMtimeHash(t *testing.T) {
-	root := findInterverseRoot(t)
-	interlockPath := filepath.Join(root, "plugins", "interlock")
+	root := findDemarchRoot(t)
+	interlockPath := filepath.Join(root, "interverse", "interlock")
 	if _, err := os.Stat(interlockPath); err != nil {
 		t.Skip("interlock directory not found")
 	}
@@ -109,11 +109,18 @@ func TestMtimeHash(t *testing.T) {
 	}
 }
 
-func findInterverseRoot(t *testing.T) string {
+func findDemarchRoot(t *testing.T) string {
 	t.Helper()
-	root := "/root/projects/Interverse"
-	if _, err := os.Stat(root); err != nil {
-		t.Skipf("Interverse root not found at %s", root)
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Skipf("cannot get working directory: %v", err)
 	}
-	return root
+	for dir != "/" {
+		if _, err := os.Stat(filepath.Join(dir, "interverse")); err == nil {
+			return dir
+		}
+		dir = filepath.Dir(dir)
+	}
+	t.Skip("not running inside Demarch monorepo")
+	return ""
 }

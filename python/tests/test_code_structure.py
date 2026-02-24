@@ -1,11 +1,17 @@
 """Tests for intermap code_structure module."""
 
+import os
+
 from intermap.code_structure import get_code_structure
+
+# Resolve intermap root relative to this test file
+_TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+INTERMAP_ROOT = os.path.normpath(os.path.join(_TESTS_DIR, "../.."))
 
 
 def test_code_structure_python():
     result = get_code_structure(
-        "/root/projects/Interverse/plugins/intermap",
+        INTERMAP_ROOT,
         language="python",
         max_results=5,
     )
@@ -24,7 +30,7 @@ def test_code_structure_python():
 
 def test_code_structure_max_results():
     result = get_code_structure(
-        "/root/projects/Interverse/plugins/intermap",
+        INTERMAP_ROOT,
         language="python",
         max_results=2,
     )
@@ -34,7 +40,7 @@ def test_code_structure_max_results():
 def test_code_structure_nonexistent_language():
     """Unknown language defaults to .py extensions, so still finds Python files."""
     result = get_code_structure(
-        "/root/projects/Interverse/plugins/intermap",
+        INTERMAP_ROOT,
         language="cobol",
         max_results=10,
     )
