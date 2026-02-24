@@ -28,6 +28,9 @@ func RegisterAll(s *server.MCPServer, c *client.Client) {
 		codeStructure(bridge),
 		impactAnalysis(bridge),
 		changeImpact(bridge),
+		crossProjectDeps(bridge),
+		detectPatterns(bridge),
+		liveChanges(bridge),
 	)
 }
 
@@ -326,6 +329,95 @@ func changeImpact(bridge *pybridge.Bridge) server.ServerTool {
 			}
 
 			result, err := bridge.Run(ctx, "change_impact", project, pyArgs)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(result)
+		},
+	}
+}
+
+func crossProjectDeps(bridge *pybridge.Bridge) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("cross_project_deps",
+			mcp.WithDescription("Map cross-project dependencies in a monorepo — Go module deps, Python path deps, plugin references."),
+			mcp.WithString("root",
+				mcp.Description("Monorepo root directory to scan"),
+				mcp.Required(),
+			),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args := req.GetArguments()
+			root, _ := args["root"].(string)
+			if root == "" {
+				return mcp.NewToolResultError("root is required"), nil
+			}
+			// Pass root as the "project" positional arg to bridge.Run
+			result, err := bridge.Run(ctx, "cross_project_deps", root, map[string]any{})
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(result)
+		},
+	}
+}
+
+func detectPatterns(bridge *pybridge.Bridge) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("detect_patterns",
+			mcp.WithDescription("Detect architectural patterns: HTTP handlers, MCP tools, middleware, interfaces, CLI commands, plugin structures."),
+			mcp.WithString("project",
+				mcp.Description("Project root directory to analyze"),
+				mcp.Required(),
+			),
+			mcp.WithString("language",
+				mcp.Description("Language (go, python, auto)"),
+			),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args := req.GetArguments()
+			project, _ := args["project"].(string)
+			if project == "" {
+				return mcp.NewToolResultError("project is required"), nil
+			}
+			pyArgs := map[string]any{
+				"language": stringOr(args["language"], "auto"),
+			}
+			result, err := bridge.Run(ctx, "detect_patterns", project, pyArgs)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			return jsonResult(result)
+		},
+	}
+}
+
+func liveChanges(bridge *pybridge.Bridge) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("live_changes",
+			mcp.WithDescription("Detect changes since a git baseline and annotate with affected symbols (functions, classes)."),
+			mcp.WithString("project",
+				mcp.Description("Project root directory (must be in a git repo)"),
+				mcp.Required(),
+			),
+			mcp.WithString("baseline",
+				mcp.Description("Git ref to diff against (default HEAD)"),
+			),
+			mcp.WithString("language",
+				mcp.Description("Language hint for extraction (auto-detects if not set)"),
+			),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args := req.GetArguments()
+			project, _ := args["project"].(string)
+			if project == "" {
+				return mcp.NewToolResultError("project is required"), nil
+			}
+			pyArgs := map[string]any{
+				"baseline": stringOr(args["baseline"], "HEAD"),
+				"language": stringOr(args["language"], "auto"),
+			}
+			result, err := bridge.Run(ctx, "live_changes", project, pyArgs)
 			if err != nil {
 				return mcp.NewToolResultError(err.Error()), nil
 			}

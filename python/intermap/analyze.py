@@ -86,5 +86,24 @@ def dispatch(command: str, project: str, args: dict) -> dict:
         result = extractor.extract(args.get("file", project))
         return result.to_dict()
 
+    elif command == "cross_project_deps":
+        from .cross_project import scan_cross_project_deps
+        return scan_cross_project_deps(project)
+
+    elif command == "detect_patterns":
+        from .patterns import detect_patterns
+        return detect_patterns(
+            project,
+            language=args.get("language", "auto"),
+        )
+
+    elif command == "live_changes":
+        from .live_changes import get_live_changes
+        return get_live_changes(
+            project,
+            baseline=args.get("baseline", "HEAD"),
+            language=args.get("language", "auto"),
+        )
+
     else:
         return {"error": "UnknownCommand", "message": f"Unknown command: {command}"}
