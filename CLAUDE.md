@@ -33,7 +33,14 @@ echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | PYTHONPATH=python CLAUDE
 | `code_structure` | Python | Functions/classes/imports |
 | `impact_analysis` | Python | Reverse call graph |
 | `change_impact` | Python | Affected tests for changes |
+| `cross_project_deps` | Python | Monorepo dependency graph |
+| `detect_patterns` | Python | Architecture pattern detection |
+| `live_changes` | Python | Git-diff with structural annotation |
+
+## Extracted Modules
+
+`python/intermap/workspace.py` and `python/intermap/ignore.py` were extracted from the tldr-swinton vendor directory. They are now owned by intermap.
 
 ## Vendored Files
 
-`python/intermap/vendor/` contains files from tldr-swinton. Do not modify — update source and re-vendor.
+`python/intermap/vendor/` contains remaining files from tldr-swinton (dirty_flag.py). Do not modify — update source and re-vendor.
