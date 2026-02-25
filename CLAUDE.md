@@ -21,7 +21,15 @@ echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | PYTHONPATH=python CLAUDE
 
 - Go MCP server (`cmd/intermap-mcp/`) — stdio transport, mcp-go SDK
 - Python analysis (`python/intermap/`) — call graphs, impact analysis, code structure
-- Go → Python bridge (`internal/python/bridge.go`) — subprocess JSON-over-stdio
+- Go → Python bridge (`internal/python/bridge.go`) — persistent sidecar via stdin/stdout JSON-RPC
+
+### Python Sidecar
+
+The bridge spawns a single long-lived `python3 -u -m intermap --sidecar` process on first use. Requests are newline-delimited JSON on stdin, responses on stdout. Benefits:
+- Python in-memory FileCache survives across MCP tool calls
+- No per-call subprocess startup overhead (~200ms saved per call after first)
+- Crash recovery: EOF detection + auto-respawn (max 3 in 10s, then falls back to single-shot mode)
+- `python3 -m intermap --command/--project/--args` still works for debugging
 
 ## MCP Tools
 

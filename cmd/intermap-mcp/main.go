@@ -20,7 +20,8 @@ func main() {
 		server.WithToolCapabilities(true),
 	)
 
-	tools.RegisterAll(s, c)
+	bridge := tools.RegisterAll(s, c)
+	defer bridge.Close()
 
 	if err := server.ServeStdio(s); err != nil {
 		fmt.Fprintf(os.Stderr, "intermap-mcp: %v\n", err)

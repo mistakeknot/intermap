@@ -18,8 +18,9 @@ import (
 
 var projectCache = cache.New[[]registry.Project](5*time.Minute, 10)
 
-// RegisterAll registers all MCP tools with the server.
-func RegisterAll(s *server.MCPServer, c *client.Client) {
+// RegisterAll registers all MCP tools with the server and returns the Python
+// bridge for lifecycle management. Caller should defer bridge.Close().
+func RegisterAll(s *server.MCPServer, c *client.Client) *pybridge.Bridge {
 	bridge := pybridge.NewBridge(pybridge.DefaultPythonPath())
 	s.AddTools(
 		projectRegistry(),
@@ -32,6 +33,7 @@ func RegisterAll(s *server.MCPServer, c *client.Client) {
 		detectPatterns(bridge),
 		liveChanges(bridge),
 	)
+	return bridge
 }
 
 func projectRegistry() server.ServerTool {
