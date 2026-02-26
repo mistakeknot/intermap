@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/mistakeknot/interbase/mcputil"
 	"github.com/mistakeknot/intermap/internal/client"
 	"github.com/mistakeknot/intermap/internal/tools"
 )
@@ -14,10 +15,12 @@ func main() {
 		client.WithBaseURL(os.Getenv("INTERMUTE_URL")),
 	)
 
+	metrics := mcputil.NewMetrics()
 	s := server.NewMCPServer(
 		"intermap",
 		"0.1.0",
 		server.WithToolCapabilities(true),
+		server.WithToolHandlerMiddleware(metrics.Instrument()),
 	)
 
 	bridge := tools.RegisterAll(s, c)

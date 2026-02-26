@@ -10,6 +10,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	"github.com/mistakeknot/interbase/mcputil"
 	"github.com/mistakeknot/intermap/internal/cache"
 	"github.com/mistakeknot/intermap/internal/client"
 	"github.com/mistakeknot/intermap/internal/mcpfilter"
@@ -67,7 +68,7 @@ func projectRegistry() server.ServerTool {
 				var err error
 				root, err = os.Getwd()
 				if err != nil {
-					return mcp.NewToolResultError(fmt.Sprintf("getwd: %v", err)), nil
+					return mcputil.WrapError(fmt.Errorf("getwd: %w", err))
 				}
 			}
 
@@ -80,7 +81,7 @@ func projectRegistry() server.ServerTool {
 
 			projects, err := registry.Scan(root)
 			if err != nil {
-				return mcp.NewToolResultError(fmt.Sprintf("scan: %v", err)), nil
+				return mcputil.WrapError(fmt.Errorf("scan: %w", err))
 			}
 
 			projectCache.Put(cacheKey, "", projects)
@@ -102,12 +103,12 @@ func resolveProject() server.ServerTool {
 			args := req.GetArguments()
 			path, _ := args["path"].(string)
 			if path == "" {
-				return mcp.NewToolResultError("path is required"), nil
+				return mcputil.ValidationError("path is required")
 			}
 
 			project, err := registry.Resolve(path)
 			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+				return mcputil.NotFoundError("resolve %q: %v", path, err)
 			}
 			return jsonResult(project)
 		},
@@ -150,14 +151,14 @@ func agentMap(c *client.Client) server.ServerTool {
 				var err error
 				root, err = os.Getwd()
 				if err != nil {
-					return mcp.NewToolResultError(fmt.Sprintf("getwd: %v", err)), nil
+					return mcputil.WrapError(fmt.Errorf("getwd: %w", err))
 				}
 			}
 
 			// Scan projects from filesystem
 			projects, err := registry.Scan(root)
 			if err != nil {
-				return mcp.NewToolResultError(fmt.Sprintf("scan: %v", err)), nil
+				return mcputil.WrapError(fmt.Errorf("scan: %w", err))
 			}
 
 			// Build project path lookup
@@ -251,7 +252,7 @@ func codeStructure(bridge *pybridge.Bridge) server.ServerTool {
 			args := req.GetArguments()
 			project, _ := args["project"].(string)
 			if project == "" {
-				return mcp.NewToolResultError("project is required"), nil
+				return mcputil.ValidationError("project is required")
 			}
 
 			pyArgs := map[string]any{
@@ -261,7 +262,7 @@ func codeStructure(bridge *pybridge.Bridge) server.ServerTool {
 
 			result, err := bridge.Run(ctx, "structure", project, pyArgs)
 			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+				return mcputil.WrapError(err)
 			}
 			return jsonResult(result)
 		},
@@ -292,7 +293,7 @@ func impactAnalysis(bridge *pybridge.Bridge) server.ServerTool {
 			project, _ := args["project"].(string)
 			target, _ := args["target"].(string)
 			if project == "" || target == "" {
-				return mcp.NewToolResultError("project and target are required"), nil
+				return mcputil.ValidationError("project and target are required")
 			}
 
 			pyArgs := map[string]any{
@@ -303,7 +304,7 @@ func impactAnalysis(bridge *pybridge.Bridge) server.ServerTool {
 
 			result, err := bridge.Run(ctx, "impact", project, pyArgs)
 			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+				return mcputil.WrapError(err)
 			}
 			return jsonResult(result)
 		},
@@ -332,7 +333,7 @@ func changeImpact(bridge *pybridge.Bridge) server.ServerTool {
 			args := req.GetArguments()
 			project, _ := args["project"].(string)
 			if project == "" {
-				return mcp.NewToolResultError("project is required"), nil
+				return mcputil.ValidationError("project is required")
 			}
 
 			pyArgs := map[string]any{
@@ -343,7 +344,7 @@ func changeImpact(bridge *pybridge.Bridge) server.ServerTool {
 
 			result, err := bridge.Run(ctx, "change_impact", project, pyArgs)
 			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+				return mcputil.WrapError(err)
 			}
 			return jsonResult(result)
 		},
@@ -363,12 +364,12 @@ func crossProjectDeps(bridge *pybridge.Bridge) server.ServerTool {
 			args := req.GetArguments()
 			root, _ := args["root"].(string)
 			if root == "" {
-				return mcp.NewToolResultError("root is required"), nil
+				return mcputil.ValidationError("root is required")
 			}
 			// Pass root as the "project" positional arg to bridge.Run
 			result, err := bridge.Run(ctx, "cross_project_deps", root, map[string]any{})
 			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+				return mcputil.WrapError(err)
 			}
 			return jsonResult(result)
 		},
@@ -391,14 +392,14 @@ func detectPatterns(bridge *pybridge.Bridge) server.ServerTool {
 			args := req.GetArguments()
 			project, _ := args["project"].(string)
 			if project == "" {
-				return mcp.NewToolResultError("project is required"), nil
+				return mcputil.ValidationError("project is required")
 			}
 			pyArgs := map[string]any{
 				"language": stringOr(args["language"], "auto"),
 			}
 			result, err := bridge.Run(ctx, "detect_patterns", project, pyArgs)
 			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+				return mcputil.WrapError(err)
 			}
 			return jsonResult(result)
 		},
@@ -424,7 +425,7 @@ func liveChanges(bridge *pybridge.Bridge) server.ServerTool {
 			args := req.GetArguments()
 			project, _ := args["project"].(string)
 			if project == "" {
-				return mcp.NewToolResultError("project is required"), nil
+				return mcputil.ValidationError("project is required")
 			}
 			pyArgs := map[string]any{
 				"baseline": stringOr(args["baseline"], "HEAD"),
@@ -432,7 +433,7 @@ func liveChanges(bridge *pybridge.Bridge) server.ServerTool {
 			}
 			result, err := bridge.Run(ctx, "live_changes", project, pyArgs)
 			if err != nil {
-				return mcp.NewToolResultError(err.Error()), nil
+				return mcputil.WrapError(err)
 			}
 			return jsonResult(result)
 		},
@@ -444,7 +445,7 @@ func liveChanges(bridge *pybridge.Bridge) server.ServerTool {
 func jsonResult(v any) (*mcp.CallToolResult, error) {
 	data, err := json.Marshal(v)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("marshal: %v", err)), nil
+		return mcputil.WrapError(fmt.Errorf("marshal: %w", err))
 	}
 	return mcp.NewToolResultText(string(data)), nil
 }
