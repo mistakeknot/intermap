@@ -16,7 +16,8 @@
       "args": [],
       "env": {
         "INTERMUTE_URL": "http://127.0.0.1:7338",
-        "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}/python"
+        "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}/python",
+        "MCP_TOOL_PROFILE": "core"
       }
     }
   }
