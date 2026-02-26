@@ -12,17 +12,22 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/mistakeknot/intermap/internal/cache"
 	"github.com/mistakeknot/intermap/internal/client"
+	"github.com/mistakeknot/intermap/internal/mcpfilter"
 	pybridge "github.com/mistakeknot/intermap/internal/python"
 	"github.com/mistakeknot/intermap/internal/registry"
 )
 
 var projectCache = cache.New[[]registry.Project](5*time.Minute, 10)
 
-// RegisterAll registers all MCP tools with the server and returns the Python
-// bridge for lifecycle management. Caller should defer bridge.Close().
+// RegisterAll registers MCP tools with the server, filtered by the active profile,
+// and returns the Python bridge for lifecycle management. Caller should defer bridge.Close().
+// Set INTERMAP_TOOL_PROFILE or MCP_TOOL_PROFILE to "core" or "minimal" to reduce
+// the tool surface. Default is "full" (all 9 tools).
 func RegisterAll(s *server.MCPServer, c *client.Client) *pybridge.Bridge {
 	bridge := pybridge.NewBridge(pybridge.DefaultPythonPath())
-	s.AddTools(
+	profile := mcpfilter.ReadProfile("INTERMAP_TOOL_PROFILE")
+
+	allTools := []server.ServerTool{
 		projectRegistry(),
 		resolveProject(),
 		agentMap(c),
@@ -32,7 +37,13 @@ func RegisterAll(s *server.MCPServer, c *client.Client) *pybridge.Bridge {
 		crossProjectDeps(bridge),
 		detectPatterns(bridge),
 		liveChanges(bridge),
-	)
+	}
+
+	filtered := mcpfilter.Filter(allTools, func(t server.ServerTool) string {
+		return t.Tool.Name
+	}, profile, mcpfilter.ToolClusters, mcpfilter.ProfileClusters)
+
+	s.AddTools(filtered...)
 	return bridge
 }
 
