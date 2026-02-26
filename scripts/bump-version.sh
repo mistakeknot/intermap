@@ -1,4 +1,9 @@
-#!/usr/bin/env bash
-# Thin wrapper around interbump.sh for intermap
+#!/bin/bash
 set -euo pipefail
-exec "$(dirname "$0")/../../scripts/interbump.sh" "$@"
+# Plugin version bump — prefers ic publish, falls back to interbump.sh
+if command -v ic &>/dev/null; then
+    exec ic publish "$@"
+fi
+SHARED="$(cd "$(dirname "$0")/../../.." && pwd)/scripts/interbump.sh"
+[ -f "$SHARED" ] || { echo "Error: neither ic nor interbump.sh found" >&2; exit 1; }
+exec "$SHARED" "$@"
