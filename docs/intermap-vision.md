@@ -24,6 +24,8 @@ Agents need structural understanding beyond file contents. When modifying code a
 - Live change awareness (git diff with structural annotation)
 - Deeper intermute integration (agent activity heatmaps)
 
+Intermap feeds the Demarch flywheel: better structural maps enable better routing (Interspect), better review (interflux), and better coordination (intermute). Its data quality directly compounds into system-wide quality (PHILOSOPHY.md: the flywheel compounds).
+
 ## Design Principles
 
 1. **Stateless** — cache-only, no persistent state written to project directories
@@ -31,3 +33,4 @@ Agents need structural understanding beyond file contents. When modifying code a
 3. **Subprocess isolation** — Python analysis runs in a subprocess, crashes don't take down the MCP server
 4. **Graceful degradation** — tools return partial results rather than failing entirely
 5. **Read-only** — intermap never modifies the codebase it analyzes
+6. **Observable** — intermap's own accuracy is measurable: did impact analysis predict the right affected files? Did change_impact identify the right tests? Instrument first, optimize later (PHILOSOPHY.md). Structural analysis that can't be validated against outcomes is just opinion.
