@@ -6,9 +6,44 @@
 
 ---
 
-## Overall Verdict: needs-changes
+## 2026-02-28 Hardening Update (iv-54iqe)
 
-The sprint is well-structured and test-covered. The two blocking concerns are in `live_changes.py`: silent exception swallowing with no logging, and a symbol annotation heuristic that only matches `def`-line membership rather than body span — meaning most real edits produce empty `symbols_affected`. A third medium issue is a regex in `cross_project.py` that can match non-replace content including comments.
+Status update for previously identified `live_changes` concerns:
+
+- **Q1 (silent exception swallowing):** resolved.
+  - `live_changes` now emits structured debug events:
+    - message: `live_changes.extractor_error`
+    - fields: `file`, `project_path`, `baseline`, `error_type`, `error_message`
+  - covered by `test_extractor_error_emits_structured_debug_log`.
+
+- **Q2 (def-line-only symbol matching):** resolved.
+  - symbol attribution now uses Python AST span overlap (function/class/method ranges) rather than start-line membership only.
+  - covered by regression fixtures for body-level edits and method-body edits.
+
+- **Q4 (pure deletion false positives):** covered.
+  - deletion behavior validated by:
+    - `test_symbol_annotation_pure_deletion_does_not_false_mark_symbols` (outside-symbol guard)
+    - `test_symbol_annotation_pure_deletion_inside_symbol_marks_function` (inside-symbol attribution)
+
+Additional verification (2026-02-28):
+- `PYTHONPATH=python python3 -m pytest python/tests/test_live_changes.py python/tests/test_live_changes_perf.py -v`
+  - `30 passed`
+- `go build ./...`
+  - pass
+
+Operational rollback guardrail:
+
+```bash
+export INTERMAP_LIVE_CHANGES_MODE=legacy
+```
+
+This forces legacy diff parsing and legacy start-line symbol attribution behavior while preserving the same public API.
+
+---
+
+## Historical Baseline Verdict (2026-02-23): needs-changes
+
+The section below captures the original 2026-02-23 review snapshot. See the 2026-02-28 hardening update above for current status and resolution evidence.
 
 ---
 

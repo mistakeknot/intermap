@@ -8,6 +8,40 @@
 
 ---
 
+## 2026-02-28 Hardening Benchmark Evidence (iv-54iqe)
+
+`live_changes` now supports `INTERMAP_LIVE_CHANGES_MODE=optimized|legacy` (default `optimized`) and includes repeated-call optimizations:
+- single `git` subprocess parse in optimized mode (`--patch-with-raw`)
+- Python symbol span cache keyed by file metadata (`mtime_ns`, `ctime_ns`, `size`) with entry and byte caps
+- baseline symbol extraction cache for pure-deletion attribution to avoid repeated `git show` calls
+
+The earlier short-TTL diff cache was removed to avoid stale results on rapid successive edits.
+
+Benchmark command:
+
+```bash
+PYTHONPATH=python python3 -m pytest python/tests/test_live_changes_perf.py -v
+```
+
+Current benchmark gate:
+- `test_live_changes_optimized_mode_improves_repeated_call_median_by_15_percent`
+- asserts at least `15%` median repeated-call improvement for optimized mode on a synthetic 15-file fixture
+- captures provenance in assertion context (`commit_sha`, platform, python version, mode labels)
+- `test_live_changes_optimized_mode_p95_not_worse_than_legacy_by_20_percent`
+- `test_live_changes_optimized_mode_cold_call_not_more_than_75_percent_slower`
+- `test_live_changes_optimized_mode_reuses_baseline_symbol_cache`
+- `test_live_changes_symbol_cache_respects_byte_cap`
+
+Rollback instruction (runtime guardrail):
+
+```bash
+export INTERMAP_LIVE_CHANGES_MODE=legacy
+```
+
+Use `legacy` mode for emergency rollback if optimized behavior regresses in production-like validation. Legacy mode restores the two-subprocess diff path and start-line extractor attribution.
+
+---
+
 ## Architecture Context
 
 ```
