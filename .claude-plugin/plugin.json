@@ -1,6 +1,6 @@
 {
   "name": "intermap",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Project-level code mapping: project registry, call graphs, architecture analysis, agent overlay, cross-project dependencies, pattern detection, live changes. MCP server with 9 tools.",
   "author": {
     "name": "mistakeknot"
