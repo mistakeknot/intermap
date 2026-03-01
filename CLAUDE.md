@@ -45,6 +45,19 @@ The bridge spawns a single long-lived `python3 -u -m intermap --sidecar` process
 | `detect_patterns` | Python | Architecture pattern detection |
 | `live_changes` | Python | Git-diff with structural annotation |
 
+## Tool Overlap with tldr-swinton
+
+Intermap and tldr-swinton share 4 functional overlaps with different scopes:
+
+| Capability | tldr-swinton | intermap | Use When |
+|-----------|-------------|----------|----------|
+| Code structure | `structure` | `code_structure` | tldr: single file. intermap: project-wide with max_results. |
+| Impact analysis | `impact` | `impact_analysis` | tldr: quick function lookup. intermap: cross-file reverse call graph. |
+| Architecture | `arch` | `detect_patterns` | tldr: layer extraction. intermap: pattern types (MCP, handlers, etc). |
+| Change impact | `change_impact` | `change_impact` | tldr: test impact. intermap: structural annotation of changed symbols. |
+
+Both plugins coexist — use tldr-swinton for file-level analysis and intermap for project-level mapping.
+
 ## Extracted Modules
 
 `python/intermap/workspace.py` and `python/intermap/ignore.py` were extracted from the tldr-swinton vendor directory. They are now owned by intermap.
