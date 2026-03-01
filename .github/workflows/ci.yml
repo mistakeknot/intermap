@@ -11,9 +11,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: Checkout interbase SDK
+        uses: actions/checkout@v4
+        with:
+          repository: mistakeknot/interbase
+          path: _deps/interbase
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+      - name: Override go.mod replace to CI path
+        run: go mod edit -replace github.com/mistakeknot/interbase=./_deps/interbase/go
       - run: go build ./...
       - run: go vet ./...
       - run: go test -race ./...
