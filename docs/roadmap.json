@@ -1,17 +1,47 @@
 {
-  "module_summary": "Project-level code mapping via MCP tools: registry, call graphs, impact analysis, architecture detection, and agent overlay.",
+  "module_summary": "Project-level code mapping via 9 MCP tools: registry, call graphs, impact analysis, cross-project deps, architecture detection, live changes, and agent overlay.",
   "roadmap": {
     "now": [
-      {"id": "IMAP-N1", "title": "Complete tldr-swinton extraction and fix test paths.", "priority": "P1"},
-      {"id": "IMAP-N2", "title": "Audit all 6 tools for accuracy, performance, and integration gaps.", "priority": "P1"}
+      {
+        "id": "IMAP-N1",
+        "title": "All v0.1 goals achieved — 9 tools, audit passed, extraction complete.",
+        "priority": "P0",
+        "status": "done"
+      }
     ],
     "next": [
-      {"id": "IMAP-N3", "title": "Cross-project dependency graph MCP tool.", "priority": "P2"},
-      {"id": "IMAP-N4", "title": "Architecture pattern detection MCP tool.", "priority": "P2"}
+      {
+        "id": "IMAP-N2",
+        "title": "Go-level result caching for detect_patterns and cross_project_deps.",
+        "priority": "P1"
+      },
+      {
+        "id": "IMAP-N3",
+        "title": "Symbol body-range detection for live_changes accuracy.",
+        "priority": "P2"
+      },
+      {
+        "id": "IMAP-N4",
+        "title": "Performance baselines and regression benchmarks.",
+        "priority": "P2"
+      }
     ],
     "later": [
-      {"id": "IMAP-L1", "title": "Live change awareness via git-diff with structural annotation.", "priority": "P2"},
-      {"id": "IMAP-L2", "title": "Deeper intermute integration (agent activity heatmaps).", "priority": "P3"}
+      {
+        "id": "IMAP-L1",
+        "title": "Language expansion: Rust and TypeScript AST parsing.",
+        "priority": "P2"
+      },
+      {
+        "id": "IMAP-L2",
+        "title": "Persistent SQLite index for large monorepos.",
+        "priority": "P3"
+      },
+      {
+        "id": "IMAP-L3",
+        "title": "Deeper intermute integration (agent activity heatmaps).",
+        "priority": "P3"
+      }
     ]
   }
 }
