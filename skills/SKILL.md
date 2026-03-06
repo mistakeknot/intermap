@@ -1,3 +1,8 @@
+---
+name: intermap
+description: "Show project map with detected projects, branches, languages, and active agents"
+---
+
 # intermap:status
 
 Show project map — all detected projects with their language, git branch, and active agents.
