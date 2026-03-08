@@ -10,7 +10,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-	"github.com/mistakeknot/interbase/mcputil"
+	"github.com/mistakeknot/interbase/go/mcputil"
 	"github.com/mistakeknot/intermap/internal/cache"
 	"github.com/mistakeknot/intermap/internal/client"
 	"github.com/mistakeknot/intermap/internal/mcpfilter"
