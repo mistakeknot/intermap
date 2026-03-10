@@ -424,3 +424,35 @@ def test_live_changes_baseline_resolution_for_modified_files(tmp_path, monkeypat
         _restore_mode(prev)
     assert result["total_files"] == 1
     assert rev_parse_calls == 0
+
+
+def test_live_changes_cold_vs_warm(tmp_path):
+    """Baseline: live_changes cold vs warm (with symbol cache).
+
+    Expected: warm call faster than cold call due to symbol cache reuse.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    _prepare_repo_with_changed_and_unchanged_files(repo)
+
+    prev = _set_mode("optimized")
+    try:
+        # Cold call (clear caches first)
+        _clear_live_changes_caches()
+        start_cold = time.perf_counter()
+        get_live_changes(str(repo), baseline="HEAD~1")
+        cold_time = time.perf_counter() - start_cold
+
+        # Warm call (symbol cache populated)
+        start_warm = time.perf_counter()
+        get_live_changes(str(repo), baseline="HEAD~1")
+        warm_time = time.perf_counter() - start_warm
+    finally:
+        _restore_mode(prev)
+
+    # Warm should be notably faster due to symbol cache
+    if cold_time > 0.05:  # Only assert if cold is measurable
+        assert warm_time < cold_time, (
+            f"warm ({warm_time:.3f}s) should be faster than cold ({cold_time:.3f}s)"
+        )
