@@ -24,3 +24,20 @@ func TestStringOr_NonStringTypes(t *testing.T) {
 		t.Errorf("stringOr(bool): expected default, got %s", got)
 	}
 }
+
+func TestGitHeadSHA_ReturnsNonEmpty(t *testing.T) {
+	sha := gitHeadSHA(".")
+	if sha == "" {
+		t.Skip("not in a git repo")
+	}
+	if len(sha) != 40 {
+		t.Errorf("expected 40-char SHA, got %d chars: %s", len(sha), sha)
+	}
+}
+
+func TestGitHeadSHA_InvalidDir(t *testing.T) {
+	sha := gitHeadSHA("/nonexistent/path")
+	if sha != "" {
+		t.Errorf("expected empty for invalid dir, got: %s", sha)
+	}
+}

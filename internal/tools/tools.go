@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -19,6 +20,8 @@ import (
 )
 
 var projectCache = cache.New[[]registry.Project](5*time.Minute, 10)
+var detectPatternsCache = cache.New[map[string]any](5*time.Minute, 10)
+var crossProjectDepsCache = cache.New[map[string]any](5*time.Minute, 10)
 
 // RegisterAll registers MCP tools with the server, filtered by the active profile,
 // and returns the Python bridge for lifecycle management. Caller should defer bridge.Close().
@@ -359,6 +362,9 @@ func crossProjectDeps(bridge *pybridge.Bridge) server.ServerTool {
 				mcp.Description("Monorepo root directory to scan"),
 				mcp.Required(),
 			),
+			mcp.WithBoolean("refresh",
+				mcp.Description("Force cache refresh"),
+			),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			args := req.GetArguments()
@@ -366,10 +372,23 @@ func crossProjectDeps(bridge *pybridge.Bridge) server.ServerTool {
 			if root == "" {
 				return mcputil.ValidationError("root is required")
 			}
+			refresh, _ := args["refresh"].(bool)
+
+			cacheKey := root
+			mtimeHash := gitHeadSHA(root)
+			if !refresh && mtimeHash != "" {
+				if cached, ok := crossProjectDepsCache.Get(cacheKey, mtimeHash); ok {
+					return jsonResult(cached)
+				}
+			}
+
 			// Pass root as the "project" positional arg to bridge.Run
 			result, err := bridge.Run(ctx, "cross_project_deps", root, map[string]any{})
 			if err != nil {
 				return mcputil.WrapError(err)
+			}
+			if mtimeHash != "" {
+				crossProjectDepsCache.Put(cacheKey, mtimeHash, result)
 			}
 			return jsonResult(result)
 		},
@@ -387,6 +406,9 @@ func detectPatterns(bridge *pybridge.Bridge) server.ServerTool {
 			mcp.WithString("language",
 				mcp.Description("Language (go, python, auto)"),
 			),
+			mcp.WithBoolean("refresh",
+				mcp.Description("Force cache refresh"),
+			),
 		),
 		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			args := req.GetArguments()
@@ -394,12 +416,25 @@ func detectPatterns(bridge *pybridge.Bridge) server.ServerTool {
 			if project == "" {
 				return mcputil.ValidationError("project is required")
 			}
+			refresh, _ := args["refresh"].(bool)
 			pyArgs := map[string]any{
 				"language": stringOr(args["language"], "auto"),
 			}
+
+			cacheKey := project
+			mtimeHash := gitHeadSHA(project)
+			if !refresh && mtimeHash != "" {
+				if cached, ok := detectPatternsCache.Get(cacheKey, mtimeHash); ok {
+					return jsonResult(cached)
+				}
+			}
+
 			result, err := bridge.Run(ctx, "detect_patterns", project, pyArgs)
 			if err != nil {
 				return mcputil.WrapError(err)
+			}
+			if mtimeHash != "" {
+				detectPatternsCache.Put(cacheKey, mtimeHash, result)
 			}
 			return jsonResult(result)
 		},
@@ -476,4 +511,14 @@ func boolOr(v any, def bool) bool {
 		return b
 	}
 	return def
+}
+
+// gitHeadSHA returns the HEAD commit SHA for a git repo, or empty string on error.
+func gitHeadSHA(dir string) string {
+	cmd := exec.Command("git", "-C", dir, "rev-parse", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
