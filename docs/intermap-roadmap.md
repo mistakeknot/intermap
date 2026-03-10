@@ -1,8 +1,17 @@
 # intermap Roadmap
 
-**Version:** 0.1.4 | **Updated:** 2026-03-01
+**Version:** 0.2.0 | **Updated:** 2026-03-09
 
-## Now (v0.1.x — current)
+## Now (v0.2 — hardening) COMPLETE
+
+All v0.2 goals achieved:
+- **Go-level result caching** — `detect_patterns` and `cross_project_deps` cached with 5-min TTL, git HEAD SHA invalidation, `refresh` parameter
+- **Symbol body-range detection** — unions baseline + working-tree symbol ranges to catch body-only edits regardless of line drift
+- **Performance baselines** — Go benchmarks (cold/warm) and Python benchmarks (cold vs warm, mode parity, p95 regression)
+- **Structured error types** — Python sidecar returns `{code, message, recoverable}`, Go bridge distinguishes recoverable (no restart) from fatal errors
+- Full test suite: 71 Python tests + Go unit/integration tests
+
+## Previous (v0.1.x)
 
 All v0.1 goals achieved:
 - 9 MCP tools working (project_registry, resolve_project, agent_map, code_structure, impact_analysis, change_impact, cross_project_deps, detect_patterns, live_changes)
@@ -11,14 +20,9 @@ All v0.1 goals achieved:
 - Full audit passed: 6 Go packages + 67 Python tests
 - Tool overlap with tldr-swinton documented (coexistence, not replacement)
 
-## Next (v0.2 — hardening)
+## Next (v0.3 — expansion)
 
-- **Go-level result caching** for detect_patterns and cross_project_deps (currently full scan per call)
-- **Symbol body-range detection** — live_changes misses body-only edits when header line unchanged
-- **Performance baselines** — add benchmarks for each tool, track regressions
-- **Error recovery hardening** — structured error types from Python, better timeout handling
-
-## Later (v0.3+ — expansion)
+## Later (v0.3+)
 
 - **Language expansion** — Rust and TypeScript AST parsing beyond Go/Python
 - **Persistent index** — optional SQLite cache for large monorepos
