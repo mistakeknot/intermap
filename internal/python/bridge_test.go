@@ -2,6 +2,7 @@ package python
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -175,5 +176,56 @@ func TestBridge_FallbackMode(t *testing.T) {
 	}
 	if _, ok := result["files"]; !ok {
 		t.Error("Expected 'files' key in fallback result")
+	}
+}
+
+func TestRecoverableError(t *testing.T) {
+	err := &RecoverableError{Code: "parse_error", Message: "bad syntax"}
+	if !IsRecoverable(err) {
+		t.Error("expected IsRecoverable to return true")
+	}
+	if err.Error() != "python recoverable [parse_error]: bad syntax" {
+		t.Errorf("unexpected error string: %s", err.Error())
+	}
+
+	// Wrapped errors should also be recoverable
+	wrapped := fmt.Errorf("wrapper: %w", err)
+	if !IsRecoverable(wrapped) {
+		t.Error("expected wrapped RecoverableError to be recoverable")
+	}
+}
+
+func TestNonRecoverableError(t *testing.T) {
+	err := fmt.Errorf("python crash")
+	if IsRecoverable(err) {
+		t.Error("expected regular error to not be recoverable")
+	}
+}
+
+func TestSidecarError_BackwardCompat(t *testing.T) {
+	// Legacy error format (no code/recoverable fields)
+	e := sidecarError{Type: "ValueError", Message: "bad value"}
+	if e.errorCode() != "ValueError" {
+		t.Errorf("expected Type fallback, got: %s", e.errorCode())
+	}
+	if e.isRecoverable() {
+		t.Error("expected legacy error to not be recoverable")
+	}
+
+	// New structured format
+	tr := true
+	e2 := sidecarError{Code: "parse_error", Message: "bad syntax", Recoverable: &tr}
+	if e2.errorCode() != "parse_error" {
+		t.Errorf("expected code field, got: %s", e2.errorCode())
+	}
+	if !e2.isRecoverable() {
+		t.Error("expected structured recoverable error to be recoverable")
+	}
+
+	// New structured format (not recoverable)
+	fl := false
+	e3 := sidecarError{Code: "internal_error", Message: "crash", Recoverable: &fl}
+	if e3.isRecoverable() {
+		t.Error("expected structured fatal error to not be recoverable")
 	}
 }

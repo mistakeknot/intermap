@@ -13,6 +13,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -64,8 +65,43 @@ type sidecarResponse struct {
 }
 
 type sidecarError struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
+	Type        string `json:"type"`        // Legacy field (backward compat)
+	Code        string `json:"code"`        // Structured error code
+	Message     string `json:"message"`
+	Recoverable *bool  `json:"recoverable"` // Pointer to detect absence
+}
+
+// errorCode returns the structured code, falling back to Type for legacy errors.
+func (e *sidecarError) errorCode() string {
+	if e.Code != "" {
+		return e.Code
+	}
+	return e.Type
+}
+
+// isRecoverable returns true if the error is explicitly marked as recoverable.
+// Defaults to false for legacy errors without the recoverable field.
+func (e *sidecarError) isRecoverable() bool {
+	if e.Recoverable != nil {
+		return *e.Recoverable
+	}
+	return false
+}
+
+// RecoverableError indicates a Python error that should be logged but not trigger sidecar restart.
+type RecoverableError struct {
+	Code    string
+	Message string
+}
+
+func (e *RecoverableError) Error() string {
+	return fmt.Sprintf("python recoverable [%s]: %s", e.Code, e.Message)
+}
+
+// IsRecoverable checks if an error is a RecoverableError.
+func IsRecoverable(err error) bool {
+	var re *RecoverableError
+	return errors.As(err, &re)
 }
 
 // Run executes a Python analysis command and returns the parsed JSON result.
@@ -79,6 +115,11 @@ func (b *Bridge) Run(ctx context.Context, command, project string, args map[stri
 
 	result, err := b.runSidecar(ctx, command, project, args)
 	if err != nil {
+		// Recoverable errors are returned directly — no crash recovery needed
+		if IsRecoverable(err) {
+			return nil, err
+		}
+
 		// Sidecar failed — try to respawn once
 		b.stopLocked()
 		b.recordCrash()
@@ -155,7 +196,13 @@ func (b *Bridge) runSidecar(ctx context.Context, command, project string, args m
 			return nil, fmt.Errorf("parse sidecar response: %w", err)
 		}
 		if resp.Error != nil {
-			return nil, fmt.Errorf("python %s: [%s] %s", command, resp.Error.Type, resp.Error.Message)
+			if resp.Error.isRecoverable() {
+				return nil, &RecoverableError{
+					Code:    resp.Error.errorCode(),
+					Message: resp.Error.Message,
+				}
+			}
+			return nil, fmt.Errorf("python %s: [%s] %s", command, resp.Error.errorCode(), resp.Error.Message)
 		}
 		return resp.Result, nil
 
