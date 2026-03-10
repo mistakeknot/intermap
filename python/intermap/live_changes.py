@@ -79,6 +79,7 @@ def get_live_changes(
             if optimized_mode:
                 py_symbols = _extract_python_symbol_ranges(fpath, use_cache=True)
                 if py_symbols:
+                    # Working-tree match: new-side hunk ranges → working-tree symbols
                     matched = [
                         sym
                         for sym in py_symbols
@@ -88,9 +89,11 @@ def get_live_changes(
                         (sym["name"], sym["type"], sym["line"]) for sym in matched
                     }
 
-                    # For pure deletions, supplement with old-side symbol spans from baseline.
-                    old_deletion_ranges = _hunks_to_old_deletion_ranges(change["hunks"])
-                    if old_deletion_ranges:
+                    # Baseline match: old-side hunk ranges → baseline symbols.
+                    # This catches body-only edits where line shifts cause the
+                    # working-tree ranges to drift from hunk line numbers.
+                    old_hunk_ranges = _hunks_to_old_line_ranges(change["hunks"])
+                    if old_hunk_ranges:
                         if baseline_identity is None:
                             baseline_identity = _resolve_baseline_identity(
                                 project_path, baseline,
@@ -101,7 +104,7 @@ def get_live_changes(
                         )
                         for sym in old_symbols:
                             if _range_overlaps_any(
-                                old_deletion_ranges, sym["start"], sym["end"]
+                                old_hunk_ranges, sym["start"], sym["end"]
                             ):
                                 _append_symbol_if_missing(matched, seen_keys, sym)
 
@@ -441,6 +444,17 @@ def _hunks_to_old_deletion_ranges(hunks: list[dict]) -> list[tuple[int, int]]:
         old_count = int(hunk.get("old_count", 1))
         old_count = max(1, old_count)
         ranges.append((old_start, old_start + old_count - 1))
+    return _merge_ranges(ranges)
+
+
+def _hunks_to_old_line_ranges(hunks: list[dict]) -> list[tuple[int, int]]:
+    """Extract old-side line ranges from ALL hunks (not just pure deletions)."""
+    ranges: list[tuple[int, int]] = []
+    for hunk in hunks:
+        old_start = int(hunk.get("old_start", 1))
+        old_count = int(hunk.get("old_count", 1))
+        if old_count > 0:
+            ranges.append((old_start, old_start + old_count - 1))
     return _merge_ranges(ranges)
 
 

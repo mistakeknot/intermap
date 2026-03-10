@@ -726,3 +726,47 @@ def test_optimized_parser_mixed_modified_deleted_does_not_cross_file_hunks(tmp_p
     assert len(by_file["mod.py"]["hunks"]) == 1
     assert by_file["gone.py"]["status"] == "deleted"
     assert by_file["gone.py"]["hunks"], "expected deleted-file hunks in optimized mode"
+
+
+def test_symbol_annotation_body_only_edit_with_line_shift(tmp_path):
+    """Body-only edit that adds lines should still match the enclosing function.
+
+    When a hunk adds lines inside function A, all symbols below shift down.
+    The baseline symbol extraction + old-side range matching catches this
+    even when working-tree line numbers drift from the hunk's old-side numbers.
+    """
+    _init_git_repo(tmp_path)
+    f = tmp_path / "funcs.py"
+    f.write_text(
+        "def alpha():\n"
+        "    return 1\n"
+        "\n"
+        "def beta():\n"
+        "    return 2\n"
+    )
+    subprocess.run(["git", "add", "."], cwd=str(tmp_path), capture_output=True, check=True)
+    subprocess.run(
+        ["git", "commit", "-m", "init"],
+        cwd=str(tmp_path), capture_output=True, check=True,
+    )
+
+    # Edit: add lines inside alpha's body only (no header change)
+    f.write_text(
+        "def alpha():\n"
+        "    x = 10\n"
+        "    y = 20\n"
+        "    return x + y\n"
+        "\n"
+        "def beta():\n"
+        "    return 2\n"
+    )
+
+    result = get_live_changes(str(tmp_path), baseline="HEAD")
+    changes = result["changes"]
+    assert len(changes) == 1
+
+    symbols = changes[0]["symbols_affected"]
+    symbol_names = [s["name"] for s in symbols]
+    assert "alpha" in symbol_names, f"Expected alpha in {symbol_names}"
+    # beta should NOT be affected — it didn't change, just shifted
+    assert "beta" not in symbol_names, f"beta should not be affected: {symbol_names}"
