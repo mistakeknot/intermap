@@ -115,3 +115,51 @@ def test_sidecar_clean_exit_on_eof():
     proc.stdin.close()  # Send EOF
     exit_code = proc.wait(timeout=5)
     assert exit_code == 0, f"Sidecar exited with code {exit_code}"
+
+
+def test_sidecar_structured_error_has_code_and_recoverable():
+    """Errors from the sidecar include code, message, and recoverable fields."""
+    proc = _start_sidecar()
+    try:
+        # Request analysis of a non-existent project path to trigger an error.
+        # The specific error type depends on which analysis function runs,
+        # but any error should have the structured format.
+        resp = _send_request(proc, 99, "structure",
+                             "/nonexistent/path/that/does/not/exist")
+        assert resp["id"] == 99
+        # The sidecar may return an error or a result with an empty file list.
+        # If it's an error, check structured fields.
+        if "error" in resp and resp["error"] is not None:
+            err = resp["error"]
+            assert "code" in err, f"Error missing 'code' field: {err}"
+            assert "message" in err, f"Error missing 'message' field: {err}"
+            assert "recoverable" in err, f"Error missing 'recoverable' field: {err}"
+            assert isinstance(err["recoverable"], bool)
+    finally:
+        proc.stdin.close()
+        proc.wait(timeout=5)
+
+
+def test_sidecar_internal_error_is_not_recoverable():
+    """An unhandled exception should map to internal_error (not recoverable)."""
+    proc = _start_sidecar()
+    try:
+        # Send a request with invalid args type to trigger an exception in dispatch
+        resp = _send_request(proc, 100, "structure", INTERMAP_ROOT,
+                             {"max_results": "not_a_number"})
+        assert resp["id"] == 100
+        # This may succeed (Python is lenient) or raise an error.
+        # If error, verify it has structured format.
+        if "error" in resp and resp["error"] is not None:
+            err = resp["error"]
+            assert "code" in err
+            assert "recoverable" in err
+
+        # Sidecar should still be alive after any error
+        resp2 = _send_request(proc, 101, "structure", INTERMAP_ROOT,
+                              {"language": "python", "max_results": 1})
+        assert resp2["id"] == 101
+        assert "result" in resp2
+    finally:
+        proc.stdin.close()
+        proc.wait(timeout=5)

@@ -10,6 +10,8 @@ import json
 import sys
 import traceback
 
+from .errors import IntermapError
+
 
 def main():
     parser = argparse.ArgumentParser(description="Intermap analysis CLI")
@@ -77,8 +79,44 @@ def _run_sidecar():
         try:
             result = dispatch(command, project, extra_args)
             resp = {"id": req_id, "result": result}
+        except IntermapError as e:
+            resp = {"id": req_id, "error": e.to_dict()}
+        except FileNotFoundError as e:
+            resp = {
+                "id": req_id,
+                "error": {
+                    "code": "file_not_found",
+                    "message": str(e),
+                    "recoverable": True,
+                },
+            }
+        except SyntaxError as e:
+            resp = {
+                "id": req_id,
+                "error": {
+                    "code": "parse_error",
+                    "message": str(e),
+                    "recoverable": True,
+                },
+            }
+        except TimeoutError as e:
+            resp = {
+                "id": req_id,
+                "error": {
+                    "code": "timeout",
+                    "message": str(e),
+                    "recoverable": True,
+                },
+            }
         except Exception as e:
-            resp = {"id": req_id, "error": {"type": type(e).__name__, "message": str(e)}}
+            resp = {
+                "id": req_id,
+                "error": {
+                    "code": "internal_error",
+                    "message": f"{type(e).__name__}: {e}",
+                    "recoverable": False,
+                },
+            }
 
         sys.stdout.write(json.dumps(resp) + "\n")
         sys.stdout.flush()
