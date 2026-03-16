@@ -41,6 +41,7 @@ func RegisterAll(s *server.MCPServer, c *client.Client) *pybridge.Bridge {
 		crossProjectDeps(bridge),
 		detectPatterns(bridge),
 		liveChanges(bridge),
+		referenceEdges(bridge),
 	}
 
 	filtered := mcpfilter.Filter(allTools, func(t server.ServerTool) string {
@@ -467,6 +468,42 @@ func liveChanges(bridge *pybridge.Bridge) server.ServerTool {
 				"language": stringOr(args["language"], "auto"),
 			}
 			result, err := bridge.Run(ctx, "live_changes", project, pyArgs)
+			if err != nil {
+				return mcputil.WrapError(err)
+			}
+			return jsonResult(result)
+		},
+	}
+}
+
+func referenceEdges(bridge *pybridge.Bridge) server.ServerTool {
+	return server.ServerTool{
+		Tool: mcp.NewTool("reference_edges",
+			mcp.WithDescription("Extract definition tags and cross-file reference edges for graph construction. Returns definitions (with line numbers) and caller/callee edges suitable for PageRank or call graph analysis."),
+			mcp.WithString("project",
+				mcp.Description("Project root path to analyze"),
+				mcp.Required(),
+			),
+			mcp.WithString("language",
+				mcp.Description("Language hint (auto, python, go, typescript, rust, java, c). Defaults to auto-detect."),
+			),
+			mcp.WithNumber("max_files",
+				mcp.Description("Maximum number of files to scan (default 500)"),
+			),
+		),
+		Handler: func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			args := req.GetArguments()
+			project, _ := args["project"].(string)
+			if project == "" {
+				return mcputil.ValidationError("project is required")
+			}
+
+			pyArgs := map[string]any{
+				"language":  stringOr(args["language"], "auto"),
+				"max_files": intOr(args["max_files"], 500),
+			}
+
+			result, err := bridge.Run(ctx, "reference_edges", project, pyArgs)
 			if err != nil {
 				return mcputil.WrapError(err)
 			}

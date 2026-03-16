@@ -105,5 +105,69 @@ def dispatch(command: str, project: str, args: dict) -> dict:
             language=args.get("language", "auto"),
         )
 
+    elif command == "reference_edges":
+        return _reference_edges(project, args)
+
     else:
         return {"error": "UnknownCommand", "message": f"Unknown command: {command}"}
+
+
+def _detect_project_language(project: str) -> str:
+    """Auto-detect the primary language of a project from marker files."""
+    import os
+    markers = [
+        ("go.mod", "go"),
+        ("Cargo.toml", "rust"),
+        ("pyproject.toml", "python"),
+        ("setup.py", "python"),
+        ("package.json", "typescript"),
+        ("pom.xml", "java"),
+        ("build.gradle", "java"),
+        ("Makefile", "c"),
+    ]
+    for filename, lang in markers:
+        if os.path.isfile(os.path.join(project, filename)):
+            return lang
+    return "python"
+
+
+def _reference_edges(project: str, args: dict) -> dict:
+    """Build definition list and cross-file reference edges for graph construction."""
+    from .cross_file_calls import build_definition_list, build_project_call_graph
+
+    language = args.get("language", "auto")
+    if language == "auto":
+        language = _detect_project_language(project)
+
+    max_files = args.get("max_files", 500)
+
+    definitions = build_definition_list(
+        project,
+        language=language,
+        max_files=max_files,
+    )
+
+    graph = build_project_call_graph(
+        project,
+        language=language,
+    )
+
+    edges = [
+        {
+            "src_file": e[0],
+            "src_symbol": e[1],
+            "dst_file": e[2],
+            "dst_symbol": e[3],
+        }
+        for e in graph.edges
+    ]
+
+    files_scanned = len(set(d["file"] for d in definitions))
+
+    return {
+        "definitions": definitions,
+        "edges": edges,
+        "files_scanned": files_scanned,
+        "language": language,
+        "edge_count": len(edges),
+    }

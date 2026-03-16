@@ -1758,6 +1758,395 @@ def build_function_index(
     return index
 
 
+def build_definition_list(
+    root: str | Path,
+    language: str = "python",
+    workspace_config: Optional[WorkspaceConfig] = None,
+    max_files: int = 500,
+) -> list[dict]:
+    """
+    Build a list of symbol definitions with file, name, line, kind, and scope.
+
+    Unlike build_function_index (which maps keys to file paths), this returns
+    a flat list of definition dicts suitable for the reference_edges MCP tool.
+
+    Args:
+        root: Project root directory
+        language: Programming language
+        workspace_config: Optional WorkspaceConfig for monorepo scoping
+        max_files: Maximum number of files to scan
+
+    Returns:
+        List of dicts with keys: file, name, line, kind, scope
+    """
+    root = Path(root).resolve()
+    defs: list[dict] = []
+
+    files = scan_project(root, language, workspace_config)
+    if max_files and len(files) > max_files:
+        files = files[:max_files]
+
+    for src_file in files:
+        src_path = Path(src_file)
+        rel_path = src_path.relative_to(root)
+
+        if language == "python":
+            defs.extend(_defs_python_file(src_path, rel_path))
+        elif language == "typescript":
+            defs.extend(_defs_typescript_file(src_path, rel_path))
+        elif language == "go":
+            defs.extend(_defs_go_file(src_path, rel_path))
+        elif language == "rust":
+            defs.extend(_defs_rust_file(src_path, rel_path))
+        elif language == "java":
+            defs.extend(_defs_java_file(src_path, rel_path))
+        elif language == "c":
+            defs.extend(_defs_c_file(src_path, rel_path))
+
+    return defs
+
+
+def _defs_python_file(src_path: Path, rel_path: Path) -> list[dict]:
+    """Extract definitions with line numbers from a Python file."""
+    try:
+        source = src_path.read_text()
+        tree = ast.parse(source)
+    except (SyntaxError, FileNotFoundError):
+        return []
+
+    defs = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            defs.append({
+                "file": str(rel_path),
+                "name": node.name,
+                "line": node.lineno,
+                "kind": "func",
+                "scope": "",
+            })
+        elif isinstance(node, ast.ClassDef):
+            defs.append({
+                "file": str(rel_path),
+                "name": node.name,
+                "line": node.lineno,
+                "kind": "class",
+                "scope": "",
+            })
+    return defs
+
+
+def _defs_typescript_file(src_path: Path, rel_path: Path) -> list[dict]:
+    """Extract definitions with line numbers from a TypeScript file."""
+    if not TREE_SITTER_AVAILABLE:
+        return []
+
+    try:
+        source = src_path.read_bytes()
+        parser = _get_ts_parser()
+        tree = parser.parse(source)
+    except (FileNotFoundError, Exception):
+        return []
+
+    defs = []
+
+    def walk(node):
+        if node.type == "export_statement":
+            for child in node.children:
+                walk(child)
+            return
+
+        if node.type in ("function_declaration", "method_definition"):
+            name = _get_ts_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "func" if node.type == "function_declaration" else "method",
+                    "scope": "",
+                })
+        elif node.type == "class_declaration":
+            name = _get_ts_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "class",
+                    "scope": "",
+                })
+        elif node.type == "lexical_declaration":
+            for child in node.children:
+                if child.type == "variable_declarator":
+                    vname = None
+                    has_arrow = False
+                    for vc in child.children:
+                        if vc.type == "identifier":
+                            vname = source[vc.start_byte:vc.end_byte].decode("utf-8")
+                        elif vc.type == "arrow_function":
+                            has_arrow = True
+                    if vname and has_arrow:
+                        defs.append({
+                            "file": str(rel_path),
+                            "name": vname,
+                            "line": child.start_point[0] + 1,
+                            "kind": "func",
+                            "scope": "",
+                        })
+
+        for child in node.children:
+            walk(child)
+
+    walk(tree.root_node)
+    return defs
+
+
+def _defs_go_file(src_path: Path, rel_path: Path) -> list[dict]:
+    """Extract definitions with line numbers from a Go file."""
+    if not TREE_SITTER_GO_AVAILABLE:
+        return []
+
+    try:
+        source = src_path.read_bytes()
+        parser = _get_go_parser()
+        tree = parser.parse(source)
+    except (FileNotFoundError, Exception):
+        return []
+
+    defs = []
+
+    def walk(node):
+        if node.type == "function_declaration":
+            name = _get_go_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "func",
+                    "scope": "",
+                })
+        elif node.type == "method_declaration":
+            name = _get_go_node_name(node, source)
+            if name:
+                receiver = _get_go_receiver_type(node, source) or ""
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "method",
+                    "scope": receiver,
+                })
+        elif node.type == "type_declaration":
+            for child in node.children:
+                if child.type == "type_spec":
+                    name = _get_go_node_name(child, source)
+                    if name:
+                        defs.append({
+                            "file": str(rel_path),
+                            "name": name,
+                            "line": child.start_point[0] + 1,
+                            "kind": "type",
+                            "scope": "",
+                        })
+
+        for child in node.children:
+            walk(child)
+
+    walk(tree.root_node)
+    return defs
+
+
+def _defs_rust_file(src_path: Path, rel_path: Path) -> list[dict]:
+    """Extract definitions with line numbers from a Rust file."""
+    if not TREE_SITTER_RUST_AVAILABLE:
+        return []
+
+    try:
+        source = src_path.read_bytes()
+        parser = _get_rust_parser()
+        tree = parser.parse(source)
+    except (FileNotFoundError, Exception):
+        return []
+
+    defs = []
+
+    def walk(node):
+        if node.type == "function_item":
+            name = _get_rust_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "func",
+                    "scope": "",
+                })
+        elif node.type == "struct_item":
+            name = _get_rust_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "struct",
+                    "scope": "",
+                })
+        elif node.type == "enum_item":
+            name = _get_rust_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "enum",
+                    "scope": "",
+                })
+        elif node.type == "trait_item":
+            name = _get_rust_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "trait",
+                    "scope": "",
+                })
+        elif node.type == "impl_item":
+            type_name = None
+            for child in node.children:
+                if child.type == "type_identifier":
+                    type_name = source[child.start_byte:child.end_byte].decode("utf-8")
+                    break
+            for child in node.children:
+                if child.type == "declaration_list":
+                    for item in child.children:
+                        if item.type == "function_item":
+                            method_name = _get_rust_node_name(item, source)
+                            if method_name:
+                                defs.append({
+                                    "file": str(rel_path),
+                                    "name": method_name,
+                                    "line": item.start_point[0] + 1,
+                                    "kind": "method",
+                                    "scope": type_name or "",
+                                })
+
+        for child in node.children:
+            walk(child)
+
+    walk(tree.root_node)
+    return defs
+
+
+def _defs_java_file(src_path: Path, rel_path: Path) -> list[dict]:
+    """Extract definitions with line numbers from a Java file."""
+    if not TREE_SITTER_JAVA_AVAILABLE:
+        return []
+
+    try:
+        source = src_path.read_bytes()
+        parser = _get_java_parser()
+        tree = parser.parse(source)
+    except (FileNotFoundError, Exception):
+        return []
+
+    defs = []
+    current_class = None
+
+    def walk(node):
+        nonlocal current_class
+
+        if node.type == "class_declaration":
+            name = _get_java_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "class",
+                    "scope": "",
+                })
+                old_class = current_class
+                current_class = name
+                for child in node.children:
+                    walk(child)
+                current_class = old_class
+                return
+
+        elif node.type == "interface_declaration":
+            name = _get_java_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "interface",
+                    "scope": "",
+                })
+
+        elif node.type == "method_declaration":
+            name = _get_java_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "method",
+                    "scope": current_class or "",
+                })
+
+        elif node.type == "constructor_declaration":
+            name = _get_java_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "constructor",
+                    "scope": current_class or "",
+                })
+
+        for child in node.children:
+            walk(child)
+
+    walk(tree.root_node)
+    return defs
+
+
+def _defs_c_file(src_path: Path, rel_path: Path) -> list[dict]:
+    """Extract definitions with line numbers from a C file."""
+    if not TREE_SITTER_C_AVAILABLE:
+        return []
+
+    try:
+        source = src_path.read_bytes()
+        parser = _get_c_parser()
+        tree = parser.parse(source)
+    except (FileNotFoundError, Exception):
+        return []
+
+    defs = []
+
+    def walk(node):
+        if node.type == "function_definition":
+            name = _get_c_node_name(node, source)
+            if name:
+                defs.append({
+                    "file": str(rel_path),
+                    "name": name,
+                    "line": node.start_point[0] + 1,
+                    "kind": "func",
+                    "scope": "",
+                })
+
+        for child in node.children:
+            walk(child)
+
+    walk(tree.root_node)
+    return defs
+
+
 def _index_python_file(src_path: Path, rel_path: Path, module_name: str, simple_module: str, index: dict):
     """Index functions and classes from a Python file."""
     try:
