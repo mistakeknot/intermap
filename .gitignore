@@ -6,3 +6,8 @@ bin/intermap-mcp
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Agent-runtime db artifacts
+.clavain/**/*.db-shm
+.clavain/**/*.db-wal
+.clavain/intercore.db*
