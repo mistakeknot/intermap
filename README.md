@@ -1,6 +1,6 @@
 # intermap
 
-Project-level code mapping MCP server for Claude Code.
+Project-level code mapping MCP server for Claude Code and Kimi Code.
 
 ## What this does
 
