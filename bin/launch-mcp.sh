@@ -10,7 +10,6 @@ BINARY="${SCRIPT_DIR}/intermap-mcp"
 
 for candidate in \
     "$BINARY" \
-    "/home/mk/projects/Sylveste/interverse/intermap/bin/intermap-mcp" \
     "${HOME}/.local/bin/intermap-mcp"
 do
     if [[ -x "$candidate" ]]; then
