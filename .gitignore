@@ -12,3 +12,5 @@ __pycache__/
 .clavain/**/*.db-wal
 .clavain/intercore.db*
 .clavain/**/*.db
+.clavain/
+.tldrs/
