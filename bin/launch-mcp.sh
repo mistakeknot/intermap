@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Launcher for intermap-mcp: probes known binary paths before falling back to go build.
-# Probe order: cache-local → source-tree (dev) → ~/.local/bin → go build.
+# Probe order: cache-local → ~/.local/bin → go build.
 # Sidesteps envs where `go` is missing from the MCP subprocess PATH.
 set -euo pipefail
 
