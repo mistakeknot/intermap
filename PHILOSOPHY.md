@@ -33,4 +33,4 @@ Advance intermap through small, testable changes aligned to its core mission: Pr
 - Brainstorms analyzed: 0
 - Plans analyzed: 0
 - Source confidence: inferred (no local brainstorm/plan corpus found)
-- Representative artifacts: none yet. Build this corpus over time under `docs/brainstorms/` and `docs/plans/`.
+- Representative artifacts: none yet. Build this corpus over time.
