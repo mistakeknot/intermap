@@ -78,7 +78,22 @@ func TestResolve(t *testing.T) {
 }
 
 func TestResolve_NotInProject(t *testing.T) {
-	_, err := Resolve("/tmp")
+	// Use a fresh temp dir, not a hard-coded /tmp: on a host where /tmp (or a
+	// parent of it) is itself a git work tree, Resolve("/tmp") legitimately
+	// succeeds. If an ancestor of the temp dir is a git work tree here, the
+	// precondition for this test does not hold, so skip instead of failing.
+	dir := t.TempDir()
+	for cur := dir; ; {
+		if _, err := os.Stat(filepath.Join(cur, ".git")); err == nil {
+			t.Skipf("%s is inside a git work tree (%s); cannot test a path outside any project", dir, cur)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			break
+		}
+		cur = parent
+	}
+	_, err := Resolve(dir)
 	if err == nil {
 		t.Error("expected error for path not in any project")
 	}
